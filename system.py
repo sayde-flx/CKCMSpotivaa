@@ -181,14 +181,22 @@ class CKCMSportsSystem:
         self._create_admin()
 
     def _create_admin(self):
-        self.add_user(
-            os.environ.get("ADMIN_USERNAME", "admin_zaide"),
-            os.environ.get("ADMIN_PASSWORD", "admin123"),
-            "admin",
-        )
-        self.add_user(SECOND_ADMIN_USERNAME, SECOND_ADMIN_PASSWORD, "admin")
-        for username, password in EXTRA_ACCOUNTS:
-            self.add_user(username, password, "admin")
+        accounts = [
+            (
+                os.environ.get("ADMIN_USERNAME", "admin_zaide"),
+                os.environ.get("ADMIN_PASSWORD", "admin123"),
+            ),
+            (SECOND_ADMIN_USERNAME, SECOND_ADMIN_PASSWORD),
+            *EXTRA_ACCOUNTS,
+        ]
+        for username, password in accounts:
+            try:
+                self.add_user(username, password, "admin")
+            except ValueError as exc:
+                # Don't crash the whole app on boot if an account is a duplicate
+                # (e.g. ADMIN_USERNAME matches one of the built-in accounts)
+                # or has an invalid password (shorter than 6 characters).
+                print(f"WARNING: skipped admin account '{username}': {exc}", flush=True)
 
     def add_user(self, username, password, role="student", profile=None):
         username = (username or "").strip()
